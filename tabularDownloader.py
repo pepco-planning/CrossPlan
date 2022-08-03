@@ -16,18 +16,14 @@ def dataFrameFromTabular(query, filePath):
     conn.open()
     cursor = conn.cursor()
     cursor.execute(query)
-
     cursor.arraysize = 5000
 
     df = pd.DataFrame(cursor.fetchall())
-
     df.to_csv(filePath, mode='a+', header=False, index=False)
-
     conn.close()
 
 def getWeekList(startEndMonths):
     connStr = (r"Provider=MSOLAP;Data Source=LB-P-WE-AS;Catalog=PEPCODW")
-
     query = daxQ.weeks(startEndMonths)
 
     conn = Pyadomd(connStr)

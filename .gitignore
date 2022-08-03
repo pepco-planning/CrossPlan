@@ -131,3 +131,4 @@ dmypy.json
 #####
 # Added Manually
 /input files
+*.exe

@@ -8,11 +8,12 @@ import numpy as np
 import warnings
 import gc
 import datetime
+import time
 
 warnings.filterwarnings("ignore")
 gc.collect()
 
-print("### CrossPlan v 1.0 ###")
+print("### CrossPlan v 2.0 ###")
 print("Witaj użytkowniku! W celu wyliczenia cross planu podążaj za instrukcjami.")
 
 print("Ustaw ścieżkę folderu, gdzie będą trzymane wszystkie pliki csv:")
@@ -51,8 +52,8 @@ while(type(yearsToSubstract) != np.int):
 
 print("Podaj liczbę pełnych tygodni sprzedaży (jeżeli 0, to wyliczy program):")
 fullWeeksSales = int(input())
-
 historicalStartEndMonths = f.setHistoricalStartEndMonths(startEndMonths, yearsToSubstract)
+
 print("Pobieram listę historycznych tygodni...")
 historicalWeeks = td.getWeekList(historicalStartEndMonths)
 
@@ -63,20 +64,18 @@ print("Zakładam, że pełna sprzedaż jest liczona dla minimum", fullWeeksSales
 if dowloadSalesDP == "y":
     print("Pobieram listę tygodni dla DP...")
     currentWeeks = td.getWeekList(startEndMonths)
-
     print("Pobieram planowaną sprzedaż DP do folderu...")
     if os.path.isfile(salesDPFilePath):
         os.remove(salesDPFilePath)
-
     for week in currentWeeks[0]:
         td.dataFrameFromTabular(daxQ.salesPlannedDP(week), salesDPFilePath)
     print("Sprzedaż DP została pobrana.")
 elif dowloadSalesDP == "n":
     # TO DO
-    print("TO DO!! walidacja pliku wejściowego.")
+    print("\nTO DO!! walidacja pliku wejściowego.\n")
 
 if dowloadSalesHisotrical == "y":
-    print("Pobieram historyczną sprzedaż do folderu...")
+    print("Pobieram historyczną sprzedaż do folderu...\n")
 
     if os.path.isfile(salesHistoricalFilePath):
         os.remove(salesHistoricalFilePath)
@@ -85,6 +84,7 @@ if dowloadSalesHisotrical == "y":
     numberOfweeks = len(historicalWeeks)
     for week in historicalWeeks[0]:
         print("Pobierany tydzień", i, "/", numberOfweeks, ": ", week, ", czas:", datetime.datetime.now())
+        time.sleep(2)
         td.dataFrameFromTabular(daxQ.salesHistorical(week), salesHistoricalFilePath)
         i = i +1
 
@@ -95,17 +95,16 @@ elif dowloadSalesHisotrical == "n":
 
 if os.path.isfile(outputFilePath):
     os.remove(outputFilePath)
-############## Poniższy kod jest kopią rozwiązania Pawła Judka
+
 cs = pd.read_csv(csFilePath, header=None, dtype={0: "category", 1: "category", 2: "float32"})
 cs.columns = ["Store", "MonthCS", "SalesCS"]
-
 salesDP = pd.read_csv(salesDPFilePath, header=None, dtype={3: "float32"})
-salesDP.columns = ["Category", "MonthDP", "WeekDP", "SalesDP"]
+salesDP.columns = ["Subclass", "MonthDP", "WeekDP", "SalesDP"]
 
 salesHistorical = pd.read_csv(salesHistoricalFilePath,
                               header=None,
                               dtype={0: "category", 1: "category", 2: "category", 3: "category", 4: "float32"})
-salesHistorical.columns = ["Category", "Store", "MonthLY", "WeekLY", "SalesLY"]
+salesHistorical.columns = ["Subclass", "Store", "MonthLY", "WeekLY", "SalesLY"]
 storeSalesWeeks = salesHistorical.groupby(["Store"])["WeekLY"].nunique().reset_index()
 storesWithFullSales = storeSalesWeeks[storeSalesWeeks.WeekLY >= fullWeeksSales]['Store'].unique()
 salesHistorical = salesHistorical[salesHistorical.Store.isin(storesWithFullSales)]
@@ -113,24 +112,22 @@ salesHistorical = salesHistorical[salesHistorical.Store.isin(storesWithFullSales
 likeStores = pd.read_csv(likeStoresFilePath, header=None, dtype={0: "category", 1: "category"})
 likeStores.columns = ["LStore", "Store"]
 like_list = likeStores.LStore.unique().tolist()
-
 like_sales = likeStores.merge(salesHistorical, left_on="LStore", right_on="Store", how="left")
 like_sales.drop(columns=["LStore", "Store_y"], inplace=True)
 like_sales.rename(columns={"Store_x": "Store"}, inplace=True)
-like_sales = like_sales[["Category", "Store", "MonthLY", "WeekLY", "SalesLY"]]
+like_sales = like_sales[["Subclass", "Store", "MonthLY", "WeekLY", "SalesLY"]]
 
 salesHistorical = pd.concat([salesHistorical, like_sales])
-
 csYear = startEndMonths[0][:5]
 salesHistorical.MonthLY = salesHistorical.MonthLY.apply(lambda x: csYear + x[5:])
 salesHistorical.WeekLY = salesHistorical.WeekLY.apply(lambda x: csYear + x[5:])
 salesHistorical.rename(columns={"MonthLY": "MonthCS", "WeekLY": "WeekDP"}, inplace=True)
 
 monthCSList = salesHistorical.MonthCS.unique()
-
 historicalSalesChunks = {}
 csChunks = {}
 salesDPChunks = {}
+
 print("Rozpoczynam chunkowanie...")
 for month in monthCSList:
     historicalSalesChunks[month] = salesHistorical[salesHistorical.MonthCS == month]
@@ -147,19 +144,19 @@ for month in monthCSList:
     del df["SalesLY"]
     del df["SalesCS"]
     del df["cont"]
-    df['catsum'] = df.groupby('Category')['SalesVDS'].transform(sum)
+    df['catsum'] = df.groupby('Subclass')['SalesVDS'].transform(sum)
 
     dp = salesDPChunks[month]
-    dp["dpsplit"] = dp.groupby("Category")["SalesDP"].transform(sum) / dp.SalesDP.sum()
-    dp['dp_week_contr'] = dp['SalesDP'] / dp.groupby('Category')['SalesDP'].transform(sum)
+    dp["dpsplit"] = dp.groupby("Subclass")["SalesDP"].transform(sum) / dp.SalesDP.sum()
+    dp['dp_week_contr'] = dp['SalesDP'] / dp.groupby('Subclass')['SalesDP'].transform(sum)
     dp.fillna(0, inplace=True)
     del dp["MonthDP"]
     del dp["SalesDP"]
 
-    ds_merged = df.merge(dp, on=['Category', 'WeekDP'], copy=False)
+    ds_merged = df.merge(dp, on=['Subclass', 'WeekDP'], copy=False)
     ds_merged['SalesVXS'] = ds_merged['dpsplit'] * ds_merged['SalesVDS'].sum() * ds_merged['SalesVDS'] / ds_merged['catsum']
     ds_merged['SalesVTP'] = ds_merged['dp_week_contr'] * ds_merged['dpsplit'] * ds_merged['SalesVDS'].sum()
-    ds_merged['SalesVTS'] = ds_merged.groupby(['Store', 'Category'])['SalesVXS'].transform(sum)
+    ds_merged['SalesVTS'] = ds_merged.groupby(['Store', 'Subclass'])['SalesVXS'].transform(sum)
     del ds_merged["SalesVDS"]
     del ds_merged["catsum"]
     del ds_merged["dpsplit"]

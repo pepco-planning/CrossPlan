@@ -4,7 +4,7 @@ def salesPlannedDP(daxWeek):
             SELECTCOLUMNS(
             FILTER(
             SUMMARIZECOLUMNS(
-            'Product Hierarchy PRH'[PRH Category ID],
+            'Product Hierarchy PRH'[PRH Subclass ID],
             'Planning Calendar PCAL'[PCAL_MONTH_KEY],
             'Planning Calendar PCAL'[PCAL_WEEK_KEY],
             FILTER(
@@ -12,8 +12,8 @@ def salesPlannedDP(daxWeek):
             'Planning Calendar PCAL'[PCAL_WEEK_KEY] = """ + str(daxWeek) + """
             ),
             FILTER(
-            VALUES('Product Hierarchy PRH'[PRH PEPCO]),
-            'Product Hierarchy PRH'[PRH PEPCO] IN {"a Merchandise"}
+            VALUES('Product Hierarchy PRH'[PRH Company]),
+            'Product Hierarchy PRH'[PRH Company] IN {"PEPCO"}
             ),
             "SalesValue",
             [Sales Retail Report DP mmfp],
@@ -24,8 +24,8 @@ def salesPlannedDP(daxWeek):
             ),
             [SalesValue] > 0
             ),
-            "PRH Category ID",
-            [PRH Category ID],
+            "Subclass",
+            [PRH Subclass ID],
             "MonthNew",
             [MonthNew],
             "WeekNew",
@@ -35,14 +35,13 @@ def salesPlannedDP(daxWeek):
             )
     """
 
-
 def salesHistorical(daxWeek):
     return """
             EVALUATE
             SELECTCOLUMNS(
             FILTER(
             SUMMARIZECOLUMNS(
-            'Product Hierarchy PRH'[PRH Category ID],
+            'Product Hierarchy PRH'[PRH Subclass ID],
             'Planning Calendar PCAL'[PCAL_MONTH_KEY],
             'Planning Calendar PCAL'[PCAL_WEEK_KEY],
             'Stores STR'[STR Number],
@@ -51,8 +50,8 @@ def salesHistorical(daxWeek):
             'Planning Calendar PCAL'[PCAL_WEEK_KEY] = """ + str(daxWeek) + """
             ),
             FILTER(
-            VALUES('Product Hierarchy PRH'[PRH PEPCO]),
-            'Product Hierarchy PRH'[PRH PEPCO] IN {"a Merchandise"}
+            VALUES('Product Hierarchy PRH'[PRH Company]),
+            'Product Hierarchy PRH'[PRH Company] IN {"PEPCO"}
             ),
             "SalesValue",
             [Sales Retail Report dsale],
@@ -63,8 +62,8 @@ def salesHistorical(daxWeek):
             ),
             [SalesValue] > 0
             ),
-            "PRH Category ID",
-            [PRH Category ID],
+            "Subclass",
+            [PRH Subclass ID],
             "STR Number",
             'Stores STR'[STR Number],
             "MonthNew",
